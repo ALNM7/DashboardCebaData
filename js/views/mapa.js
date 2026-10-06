@@ -2,7 +2,9 @@
 (function (global) {
   "use strict";
   var esc = UI.esc, fmt = UI.fmt, icon = UI.icon;
-  var TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+  /* Mapa base claro (datos de OpenStreetMap, estilo CARTO Positron). Si quieres otro proveedor, cambia estas dos constantes. */
+  var TILES = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+  var TILES_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>';
   var ZONAS = [
     { nombre: "Calpulalpan, Tlaxcala", estado: "Tlaxcala" },
     { nombre: "Singuilucan y Emiliano Zapata, Hidalgo", corto: "Singuilucan y Emiliano Zapata, Hgo.", estado: "Hidalgo" },
@@ -71,7 +73,7 @@
 
       /* ---------- mapa ---------- */
       map = L.map($("#map"), { zoomControl: false, zoomSnap: 0.25, minZoom: 8, maxZoom: 17, attributionControl: true });
-      L.tileLayer(TILES, { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>' }).addTo(map);
+      L.tileLayer(TILES, { maxZoom: 19, subdomains: "abcd", attribution: TILES_ATTR }).addTo(map);
       L.control.zoom({ position: "bottomright", zoomInTitle: "Acercar", zoomOutTitle: "Alejar" }).addTo(map);
       var layer = L.layerGroup().addTo(map);
       var allBounds = L.latLngBounds(data.map(function (p) { return [p.lat, p.lon]; }));

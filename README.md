@@ -13,7 +13,7 @@ python3 -m http.server 8000
 # abrir http://localhost:8000
 ```
 
-También funciona abriendo `index.html` directamente. El mapa base de OpenStreetMap y la tipografía Inter se cargan por internet. Leaflet va incluido en `vendor/`.
+También funciona abriendo `index.html` directamente. El mapa base (datos de OpenStreetMap con estilo claro de CARTO) y la tipografía Inter se cargan por internet. Leaflet va incluido en `vendor/`.
 
 ## Secciones
 
