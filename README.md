@@ -4,16 +4,33 @@ Dashboard web en español para consultar un modelo de machine learning que predi
 
 Los datos que muestra son **simulados** (semilla fija, siempre iguales) y siguen la estructura de la API real.
 
-## Cómo abrirlo
+## Cómo ejecutarlo
 
-No necesita instalación ni compilación. Sirve la carpeta con cualquier servidor estático:
+No necesita instalación ni compilación. **Hay que abrirlo desde un servidor local**, no con doble clic sobre `index.html`.
 
-```bash
-python3 -m http.server 8000
-# abrir http://localhost:8000
-```
+1. Abre una terminal en la carpeta del proyecto (la que contiene `index.html`).
+2. Ejecuta:
 
-También funciona abriendo `index.html` directamente. El mapa base (datos de OpenStreetMap con estilo claro de CARTO) y la tipografía Inter se cargan por internet. Leaflet va incluido en `vendor/`.
+   ```bash
+   python3 -m http.server 8000
+   ```
+
+   En Windows, si `python3` no funciona, usa `python -m http.server 8000` o `py -m http.server 8000`.
+3. Abre `http://localhost:8000` en el navegador.
+4. Para detener el servidor, presiona `Ctrl + C` en la terminal.
+
+Necesitas conexión a internet para el mapa base y la tipografía Inter. Leaflet va incluido en `vendor/`.
+
+### Por qué no con doble clic
+
+El mapa base usa los tiles oficiales de OpenStreetMap. Su política de uso exige que cada petición indique desde qué sitio se hace (cabecera `Referer`). Con `file://` el navegador no la manda y OpenStreetMap bloquea los tiles con el mensaje "app is not following the tile usage policy". Con `http://localhost` sí se manda y el mapa carga. Si abres el archivo directo, la página muestra un aviso con estos pasos.
+
+### Si el mapa sale en gris o bloqueado
+
+- Recarga sin caché con `Ctrl + Shift + R`.
+- Confirma que la dirección empieza con `http://localhost`.
+- Desactiva extensiones que borran la cabecera de referencia (algunos bloqueadores de rastreo).
+- Los tiles de OpenStreetMap son un servicio de voluntarios. Sirven para desarrollo y demostraciones con poco tráfico. Para publicar la herramienta con uso real, cambia `TILES` y `TILES_ATTR` en `js/views/mapa.js` por un proveedor de mapas con llave (por ejemplo MapTiler o Stadia Maps) o por un servidor de tiles propio. La política vigente está en https://operations.osmfoundation.org/policies/tiles/
 
 ## Secciones
 

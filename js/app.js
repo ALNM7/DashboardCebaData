@@ -64,7 +64,19 @@
     pintaToggle();
   }
 
+  /* ---------- aviso si se abre sin servidor ---------- */
+  function avisoArchivoLocal() {
+    if (location.protocol !== "file:") return;
+    var d = document.createElement("div");
+    d.className = "callout callout-warn";
+    d.setAttribute("role", "alert");
+    d.style.margin = "12px 32px 0";
+    d.innerHTML = icon("warn") + "<div><strong>Estás abriendo la página como archivo local.</strong> El mapa de OpenStreetMap no cargará porque exige que la página se sirva por http. En la carpeta del proyecto ejecuta <code>python3 -m http.server 8000</code> y abre <code>http://localhost:8000</code>.</div>";
+    main.parentNode.insertBefore(d, main);
+  }
+
   /* ---------- arranque ---------- */
+  avisoArchivoLocal();
   document.querySelectorAll("[data-icon]").forEach(function (el) { el.innerHTML = icon(el.dataset.icon); });
   UI.initTooltip();
   buildNav();
