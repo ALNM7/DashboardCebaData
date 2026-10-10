@@ -85,3 +85,16 @@ Herramienta de apoyo; no sustituye la evaluación crediticia.
 ## Accesibilidad
 
 Ni el riesgo ni el conjunto se comunican solo con color: siempre hay icono, forma o etiqueta. Las gráficas tienen tooltip, leyenda visible y, cuando hay muchos puntos, una tabla alternativa. El mapa se complementa con la tabla, que se recorre con teclado.
+
+## Pipeline y modelos
+
+La carpeta `pipeline/` trae el pipeline de datos y el modelo (LightGBM, Random Forest y Elastic Net con ensamble) que genera las predicciones de las 59 parcelas. El paso a paso para correrlo está en [`pipeline/README.md`](pipeline/README.md). Resumen:
+
+```bash
+cd pipeline
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python correr_pipeline.py
+```
+
+Necesita la carpeta `DATASET_RETO_AGRO_2026/` en la raíz del repo. Las salidas quedan en `pipeline/salidas/`. El dashboard todavía muestra datos simulados y no lee esas salidas.
