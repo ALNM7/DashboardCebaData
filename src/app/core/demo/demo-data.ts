@@ -13,11 +13,15 @@ import {
   IndiceId,
   ItemShap,
   Metricas,
+  OpcionesNuevaParcela,
   Parcela,
+  PeticionNuevaParcela,
   PeticionSimulador,
   PuntoSerie,
   RangoEntrenamiento,
+  RespuestaNuevaParcela,
   RespuestaSimulador,
+  VariableImputada,
   Vecino,
 } from '../models';
 
@@ -60,6 +64,13 @@ function haversine(lat1: number, lon1: number, lat2: number, lon2: number): numb
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 const sigmoid = (x: number) => 1 / (1 + Math.exp(-x));
+
+/** Error con código HTTP, igual que el de la API real. */
+export class ErrorDemo extends Error {
+  constructor(mensaje: string, readonly status = 400) {
+    super(mensaje);
+  }
+}
 
 /* ---------- escenario ---------- */
 interface MunicipioDemo {
@@ -310,6 +321,75 @@ export class DatosDemo {
       entradas: { lluvia_mayo_base: lluviaBase, lluvia_mayo_escenario: lluviaEsc, tmin_abril_base: tminBase, tmin_abril_escenario: tminEsc },
       fuera_de_rango: fuera,
       rango_entrenamiento: structuredClone(R),
+    };
+  }
+
+  opcionesNuevaParcela(): OpcionesNuevaParcela {
+    const por = new Map<string, { municipio: string; estado: string; n: number }>();
+    this.parcelas.forEach((p) => {
+      const m = por.get(p.municipio) ?? { municipio: p.municipio, estado: p.estado, n: 0 };
+      m.n++;
+      por.set(p.municipio, m);
+    });
+    return {
+      municipios: [...por.values()].sort((a, b) => a.municipio.localeCompare(b.municipio, 'es')),
+      clima: { prec_mm: [4, 5, 6, 7, 8, 9, 10], tmax_c: [4, 5, 6, 8], tmin_c: [4, 6] },
+      rangos: {
+        lat: { min: 19.52, max: 19.98 }, lon: { min: -98.61, max: -98.2 }, area_ha: { min: 0.1, max: 500 },
+        prec_mm: { min: 0, max: 400 }, tmax_c: { min: 22, max: 27 }, tmin_c: { min: 9, max: 14 },
+      },
+      limites: { area_ha: [0.1, 500] },
+    };
+  }
+
+  /** Estimación simulada: promedio de las 3 parcelas más cercanas ponderado por 1/distancia^2. */
+  predecir(c: PeticionNuevaParcela): RespuestaNuevaParcela {
+    const num = (v: unknown, nombre: string, lo: number, hi: number) => {
+      if (typeof v !== 'number' || !isFinite(v) || v < lo || v > hi) throw new ErrorDemo(`${nombre} debe ser un número entre ${lo} y ${hi}.`);
+      return v;
+    };
+    const lat = num(c.lat, 'lat', -90, 90), lon = num(c.lon, 'lon', -180, 180), area = num(c.area_ha, 'area_ha', 0.1, 500);
+    if (!c.municipio || !c.municipio.trim()) throw new ErrorDemo('municipio es obligatorio.');
+    const conocida = this.parcelas.find((p) => p.municipio.toLowerCase() === c.municipio.trim().toLowerCase());
+    const orden = this.parcelas.map((p) => ({ p, d: haversine(lat, lon, p.lat, p.lon) })).sort((a, b) => a.d - b.d);
+    const vec = orden.slice(0, 3);
+    const w = vec.map((v) => 1 / Math.max(v.d, 0.5) ** 2);
+    const sw = w.reduce((s, x) => s + x, 0);
+    const pred = vec.reduce((s, v, i) => s + v.p.rendimiento_pred * (w[i] / sw), 0);
+    const dNn = orden[0].d;
+    const sd = Math.sqrt(vec.reduce((s, v, i) => s + (w[i] / sw) * (v.p.rendimiento_pred - pred) ** 2, 0));
+    const factor = 1 + 0.25 * Math.min(dNn / 5, 4);
+    const semi = Math.sqrt(0.749 ** 2 + sd ** 2) * factor;
+    const avisos: RespuestaNuevaParcela['avisos'] = [
+      { codigo: 'estimacion_de_zona', nivel: 'info', mensaje: 'Es una estimación de zona: el modelo no conoce las imágenes de satélite ni la topografía de esta parcela, solo su ubicación, su área y el clima que le des. El resto se toma de parcelas conocidas cercanas.' },
+    ];
+    if (!conocida) avisos.push({ codigo: 'municipio_desconocido', nivel: 'alerta', mensaje: `El municipio «${c.municipio.trim()}» no tiene parcelas de entrenamiento: el modelo no tiene su efecto de zona.` });
+    if (dNn > 15) avisos.push({ codigo: 'fuera_de_zona', nivel: 'alerta', mensaje: `La ubicación queda fuera de las zonas de entrenamiento (la parcela conocida más cercana está a ${dNn.toFixed(1)} km). Aquí la predicción no es confiable.` });
+    else if (dNn > 5) avisos.push({ codigo: 'lejos_de_parcelas', nivel: 'aviso', mensaje: `La parcela conocida más cercana está a ${dNn.toFixed(1)} km: la estimación es menos confiable y el intervalo es más ancho.` });
+    const base = vec[0].p;
+    const muestra: [string, string, string, string, number][] = [
+      ['elevacion_m', 'Elevación', 'Topografía', 'm', base.elevacion_m], ['pendiente_grados', 'Pendiente del terreno', 'Topografía', '°', base.pendiente_grados],
+      ['ndvi_pico', 'NDVI máximo', 'Satélite', '', 0.57], ['ndvi_tasa_verdeo', 'Velocidad de verdeo NDVI', 'Satélite', 'por día', 0.0052],
+      ['ndvi_tasa_senescencia', 'Velocidad de senescencia NDVI', 'Satélite', 'por día', -0.0041], ['lai_pico', 'LAI máximo', 'Satélite', '', 2.9],
+      ['nddi_auc', 'Integral de NDDI', 'Satélite', '', 0.31], ['ndvi_auc_2024', 'NDVI acumulado 2024', 'Historia NDVI', '', 3.1],
+    ];
+    const imputadas: VariableImputada[] = muestra.map(([variable, etiqueta, grupo, unidad, valor]) => ({ variable, etiqueta, grupo, valor, unidad, origen: 'vecinos' }));
+    const dados = c.clima ? Object.values(c.clima).reduce((s, m) => s + Object.keys(m ?? {}).length, 0) : 0;
+    const clima: Record<string, number> = {};
+    for (const [campo, meses] of Object.entries(c.clima ?? {})) for (const [m, v] of Object.entries(meses ?? {})) clima[`${campo}_m${m.padStart(2, '0')}`] = v;
+    const grupos: Record<string, number> = {};
+    imputadas.forEach((v) => (grupos[v.grupo] = (grupos[v.grupo] ?? 0) + 1));
+    return {
+      prediccion: { pred: round(pred, 2), inf: round(pred - semi, 2), sup: round(pred + semi, 2) },
+      entradas: { lat, lon, area_ha: area, municipio: conocida?.municipio ?? c.municipio.trim(), estado: conocida?.estado ?? null, clima },
+      intervalo: { semiancho: round(semi, 3), semiancho_base: 0.749, factor_distancia: round(factor, 2), dispersion_vecinos: round(sd, 3), nota: 'Regla práctica: el intervalo base de las demás parcelas, ensanchado por la distancia al vecino más cercano y por la dispersión entre vecinos. No está calibrado.' },
+      imputacion: {
+        metodo: 'vecinos_ponderados', n_variables: 15 + dados + imputadas.length, n_proporcionadas: 15 + dados, n_calculadas: 0, n_imputadas: imputadas.length,
+        datos_usuario: ['Latitud', 'Longitud', 'Área', 'Municipio'], por_grupo: grupos,
+        vecinos: vec.map((v, i) => ({ id: v.p.id, municipio: v.p.municipio, distancia_km: round(v.d, 2), peso: round(w[i] / sw, 3), rendimiento: v.p.rendimiento_pred })),
+        variables_imputadas: imputadas,
+      },
+      avisos,
     };
   }
 

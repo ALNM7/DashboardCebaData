@@ -654,3 +654,7 @@ button.rcard { cursor: pointer; font: inherit; color: inherit; }
 router-outlet { display: none; }
 .prueba-titulo { font-size: 14px; margin: 4px 0 -4px; }
 .prueba-titulo .muted { font-weight: 400; }
+.np-par { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.np-celda { min-height: 30px; padding: 0 6px; width: 76px; text-align: right; }
+.np-celda:disabled { background: var(--surface-3); opacity: .6; cursor: not-allowed; }
+.np-clima[open] summary { margin-bottom: 4px; }

@@ -168,3 +168,64 @@ export interface RespuestaSimulador {
 }
 
 export type NivelRiesgo = 'bajo' | 'medio' | 'alto';
+
+/* ---------- nueva parcela ---------- */
+
+export type CampoClima = 'prec_mm' | 'tmax_c' | 'tmin_c';
+export type ClimaDado = Partial<Record<CampoClima, Record<string, number>>>;
+
+export interface OpcionesNuevaParcela {
+  municipios: { municipio: string; estado: string; n: number }[];
+  /** meses (4 a 10) que el modelo usa de cada variable de clima */
+  clima: Record<CampoClima, number[]>;
+  rangos: {
+    lat: { min: number; max: number };
+    lon: { min: number; max: number };
+    area_ha: { min: number; max: number };
+    prec_mm: { min: number; max: number };
+    tmax_c: { min: number; max: number };
+    tmin_c: { min: number; max: number };
+  };
+  limites: { area_ha: [number, number] };
+}
+
+export interface PeticionNuevaParcela {
+  lat: number;
+  lon: number;
+  municipio: string;
+  area_ha: number;
+  clima?: ClimaDado;
+}
+
+export interface AvisoNuevaParcela {
+  codigo: string;
+  nivel: 'info' | 'aviso' | 'alerta';
+  mensaje: string;
+}
+
+export interface VariableImputada {
+  variable: string;
+  etiqueta: string;
+  grupo: string;
+  valor: number;
+  unidad: string;
+  origen: 'vecinos' | 'mediana_municipio' | 'mediana_entrenamiento';
+}
+
+export interface RespuestaNuevaParcela {
+  prediccion: PrediccionIntervalo;
+  entradas: { lat: number; lon: number; area_ha: number; municipio: string; estado: string | null; clima: Record<string, number> };
+  intervalo: { semiancho: number; semiancho_base: number; factor_distancia: number; dispersion_vecinos: number; nota: string };
+  imputacion: {
+    metodo: 'vecinos_ponderados' | 'mediana_municipio' | 'mediana_entrenamiento';
+    n_variables: number;
+    n_proporcionadas: number;
+    n_calculadas: number;
+    n_imputadas: number;
+    datos_usuario: string[];
+    por_grupo: Record<string, number>;
+    vecinos: { id: string; municipio: string; distancia_km: number; peso: number; rendimiento: number }[];
+    variables_imputadas: VariableImputada[];
+  };
+  avisos: AvisoNuevaParcela[];
+}

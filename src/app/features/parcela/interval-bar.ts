@@ -5,6 +5,9 @@ import { fmt } from '../../core/format';
 import { Parcela } from '../../core/models';
 import { TipDirective, b, fila, filaSub, tip } from '../../core/tooltip';
 
+/** Lo mínimo que necesita la barra: sirve para una parcela y para una estimación de parcela nueva. */
+export type ParaIntervalo = Pick<Parcela, 'rendimiento_pred' | 'intervalo_inf' | 'intervalo_sup' | 'rendimiento_obs'>;
+
 /** Intervalo de predicción de una parcela sobre una escala de rendimiento. */
 @Component({
   selector: 'ceba-interval-bar',
@@ -42,7 +45,7 @@ import { TipDirective, b, fila, filaSub, tip } from '../../core/tooltip';
   `,
 })
 export class IntervalBarComponent {
-  readonly parcela = input.required<Parcela>();
+  readonly parcela = input.required<ParaIntervalo>();
   protected readonly fmt = fmt;
 
   protected readonly geo = computed(() => {

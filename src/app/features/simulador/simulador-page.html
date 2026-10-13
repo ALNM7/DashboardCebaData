@@ -4,6 +4,14 @@
   <div class="card skel-card" style="min-height:340px"><ceba-skel [h]="16" w="35%" /><ceba-skel [h]="200" mt="16px" /></div>
   <div class="card skel-card" style="min-height:420px"><ceba-skel [h]="16" w="35%" /><ceba-skel [h]="300" mt="16px" /></div>
 } @else {
+  <div class="seg" role="group" aria-label="Qué parcela simular" style="align-self:flex-start">
+    <button type="button" [attr.aria-pressed]="modo() === 'existente'" (click)="modo.set('existente')">Parcela existente</button>
+    <button type="button" [attr.aria-pressed]="modo() === 'nueva'" (click)="modo.set('nueva')">Nueva parcela</button>
+  </div>
+
+  @if (modo() === 'nueva') {
+    <ceba-nueva-parcela />
+  } @else {
   <section class="card" aria-labelledby="h-sim">
     <div class="card-head">
       <div>
@@ -140,6 +148,7 @@
       </div>
     </div>
   </section>
+  }
 
   <section class="card" aria-labelledby="h-risk">
     <div class="card-head">

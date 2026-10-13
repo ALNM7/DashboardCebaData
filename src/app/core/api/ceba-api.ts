@@ -4,7 +4,9 @@ import { firstValueFrom } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { DatosDemo } from '../demo/demo-data';
-import { DetalleParcela, Metricas, Parcela, PeticionSimulador, RespuestaSimulador } from '../models';
+import {
+  DetalleParcela, Metricas, OpcionesNuevaParcela, Parcela, PeticionNuevaParcela, PeticionSimulador, RespuestaNuevaParcela, RespuestaSimulador,
+} from '../models';
 
 /** Error de la API con el código HTTP, para distinguir un 404 de una caída. */
 export class ErrorApi extends Error {
@@ -20,12 +22,16 @@ export class ErrorApi extends Error {
  *   GET  /api/parcelas/:id        ficha de una parcela
  *   GET  /api/modelo/metricas     métricas de la mezcla, comparación para la metodología y hallazgos
  *   POST /api/simulador           escenario de lluvia de mayo y Tmin de abril
+ *   GET  /api/nueva-parcela/opciones   municipios y campos de clima para el formulario
+ *   POST /api/predecir            estimación para una parcela nueva
  */
 export abstract class CebaApi {
   abstract parcelas(): Promise<Parcela[]>;
   abstract parcela(id: string): Promise<DetalleParcela>;
   abstract metricas(): Promise<Metricas>;
   abstract simular(cuerpo: PeticionSimulador): Promise<RespuestaSimulador>;
+  abstract opcionesNuevaParcela(): Promise<OpcionesNuevaParcela>;
+  abstract predecir(cuerpo: PeticionNuevaParcela): Promise<RespuestaNuevaParcela>;
 }
 
 @Injectable()
@@ -44,6 +50,12 @@ export class HttpCebaApi extends CebaApi {
   }
   simular(cuerpo: PeticionSimulador) {
     return this.pedir<RespuestaSimulador>('POST', '/api/simulador', cuerpo);
+  }
+  opcionesNuevaParcela() {
+    return this.pedir<OpcionesNuevaParcela>('GET', '/api/nueva-parcela/opciones');
+  }
+  predecir(cuerpo: PeticionNuevaParcela) {
+    return this.pedir<RespuestaNuevaParcela>('POST', '/api/predecir', cuerpo);
   }
 
   private async pedir<T>(metodo: 'GET' | 'POST', ruta: string, cuerpo?: unknown): Promise<T> {
@@ -84,6 +96,13 @@ export class DemoCebaApi extends CebaApi {
       if (!r) throw new ErrorApi('Parcela no encontrada', 404);
       return r;
     });
+  }
+
+  opcionesNuevaParcela() {
+    return this.esperar(() => this.datos.opcionesNuevaParcela());
+  }
+  predecir(cuerpo: PeticionNuevaParcela) {
+    return this.esperar(() => this.datos.predecir(cuerpo));
   }
 
   private esperar<T>(f: () => T): Promise<T> {

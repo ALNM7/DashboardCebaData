@@ -55,7 +55,7 @@ Necesitas conexión a internet para el mapa base (OpenStreetMap) y la tipografí
 2. **Ficha de parcela**: predicción con intervalo, curva de índices satelitales (NDVI, EVI, LAI, NDDI, NDWI; Sentinel-2 o Planet), clima mensual, cascada tipo SHAP y 5 parcelas vecinas.
 3. **Desempeño del modelo**: métricas de la mezcla donde se califica (validación anidada estratificada por municipio) y en una zona nueva (un municipio fuera, LOMO), error contra sus referencias, importancia por familia, dispersión, residuales, robustez espacial y metodología. Dentro de la metodología, un párrafo y una tabla estática justifican por qué se eligió la mezcla.
 4. **Hallazgos clave**: tres tarjetas narrativas con gráficas. El texto se arma con los números que devuelve la API.
-5. **Simulador y riesgo crediticio**: escenarios de lluvia de mayo y temperatura mínima de abril con el modelo real, aviso de rango (con la nota de que con la mezcla solo la parte del ensamble reacciona al clima y de que la lluvia de mayo puede actuar como indicador de zona), y semáforo de riesgo con precio y costo editables.
+5. **Simulador y riesgo crediticio**: dos modos. "Parcela existente" simula escenarios de lluvia de mayo y temperatura mínima de abril con el modelo real, aviso de rango (con la nota de que con la mezcla solo la parte del ensamble reacciona al clima y de que la lluvia de mayo puede actuar como indicador de zona), y semáforo de riesgo con precio y costo editables. "Nueva parcela" estima una parcela que no está en los datos a partir de ubicación, municipio, área y clima opcional: muestra la predicción con su intervalo, las parcelas vecinas usadas, cuántas de las 121 variables se imputaron (con la lista completa y su origen) y los avisos cuando la ubicación queda lejos o fuera de las zonas de entrenamiento.
 
 ## Estructura
 
@@ -85,6 +85,8 @@ Usa componentes standalone, signals, `resource` para cargar datos y rutas con ca
 | GET | `/api/parcelas/:id` | `{ parcela, serie, clima, shap, shap_otras, base, vecinos }` |
 | GET | `/api/modelo/metricas` | métricas de la mezcla (estratificada y LOMO), dispersión, residuales, importancias, robustez, hallazgos y la tabla de comparación para la metodología |
 | POST | `/api/simulador` | recibe `{ id, delta_lluvia_mayo_pct, delta_tmin_abril_c }` |
+| GET | `/api/nueva-parcela/opciones` | municipios conocidos, meses de clima que usa el modelo y rangos |
+| POST | `/api/predecir` | recibe `{ lat, lon, municipio, area_ha, clima? }` |
 
 Los tipos están en `src/app/core/models.ts`. Si la API no tiene cargadas las curvas satelitales, la ficha muestra "Sin observaciones" en esa gráfica.
 
