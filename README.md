@@ -1,76 +1,90 @@
-# CebaData
+# CebaData Dashboard
 
-Dashboard web en español para consultar un modelo de machine learning que predice el rendimiento de cebada (t/ha) en 197 parcelas del altiplano de Hidalgo, Puebla y Tlaxcala, ciclo abril a octubre de 2025.
+Dashboard web en español, hecho en Angular, para consultar el modelo que predice el rendimiento de cebada (t/ha) en 197 parcelas del altiplano de Hidalgo, Puebla y Tlaxcala, ciclo abril a octubre de 2025.
 
-Los datos que muestra son **simulados** (semilla fija, siempre iguales) y siguen la estructura de la API real.
+Los datos los sirve [cebadata_api](https://github.com/ALNM7/cebadata_api) (proyecto Django con el pipeline y los modelos). Este repo es solo el front.
 
 ## Cómo ejecutarlo
 
-No necesita instalación ni compilación. **Hay que abrirlo desde un servidor local**, no con doble clic sobre `index.html`.
+Necesitas Node 20.19 o mayor (o 22.12 o mayor) y npm.
 
-1. Abre una terminal en la carpeta del proyecto (la que contiene `index.html`).
-2. Ejecuta:
+```bash
+npm install
+```
+
+### Con la API real
+
+1. Levanta la API (ver el README de `cebadata_api`): `python manage.py runserver` en el puerto 8000.
+2. En este repo:
 
    ```bash
-   python3 -m http.server 8000
+   npm start            # http://localhost:4200
    ```
 
-   En Windows, si `python3` no funciona, usa `python -m http.server 8000` o `py -m http.server 8000`.
-3. Abre `http://localhost:8000` en el navegador.
-4. Para detener el servidor, presiona `Ctrl + C` en la terminal.
+`ng serve` manda las peticiones a `/api` al puerto 8000 con `proxy.conf.json`. Si la API está en otro lado, cambia el `target` de ese archivo, o pon la dirección completa en `apiUrl` de `src/environments/environment.ts` (y agrega el origen del front en `CORS_ALLOWED_ORIGINS` de la API).
 
-Necesitas conexión a internet para el mapa base y la tipografía Inter. Leaflet va incluido en `vendor/`.
+### Modo demostración (sin servidor)
 
-### Por qué no con doble clic
+```bash
+npm run start:demo   # datos simulados en el navegador, siempre los mismos
+```
 
-El mapa base usa los tiles oficiales de OpenStreetMap. Su política de uso exige que cada petición indique desde qué sitio se hace (cabecera `Referer`). Con `file://` el navegador no la manda y OpenStreetMap bloquea los tiles con el mensaje "app is not following the tile usage policy". Con `http://localhost` sí se manda y el mapa carga. Si abres el archivo directo, la página muestra un aviso con estos pasos.
+Sirve para revisar el diseño sin tener la API. Muestra la etiqueta "Datos de demostración". Para publicar una versión así: `npm run build:demo`.
+
+### Otros comandos
+
+```bash
+npm run build        # compilación de producción en dist/
+npm test             # pruebas (Vitest)
+```
+
+Necesitas conexión a internet para el mapa base (OpenStreetMap) y la tipografía Inter. Leaflet viene de npm. El archivo `.npmrc` activa `legacy-peer-deps` porque npm 10 falla al resolver los peers de Vitest.
 
 ### Si el mapa sale en gris o bloqueado
 
 - Recarga sin caché con `Ctrl + Shift + R`.
-- Confirma que la dirección empieza con `http://localhost`.
-- Desactiva extensiones que borran la cabecera de referencia (algunos bloqueadores de rastreo).
-- Los tiles de OpenStreetMap son un servicio de voluntarios. Sirven para desarrollo y demostraciones con poco tráfico. Para publicar la herramienta con uso real, cambia `TILES` y `TILES_ATTR` en `js/views/mapa.js` por un proveedor de mapas con llave (por ejemplo MapTiler o Stadia Maps) o por un servidor de tiles propio. La política vigente está en https://operations.osmfoundation.org/policies/tiles/
+- Abre la app desde `http://localhost` y no con `file://`: OpenStreetMap exige la cabecera `Referer`.
+- Desactiva extensiones que borran esa cabecera.
+- Los tiles de OpenStreetMap son un servicio de voluntarios y sirven para desarrollo y demostraciones con poco tráfico. Para uso real cambia `TILES` y `TILES_ATTR` en `src/app/features/mapa/mapa-page.ts` por un proveedor con llave (MapTiler, Stadia Maps) o un servidor propio. Política vigente: https://operations.osmfoundation.org/policies/tiles/
 
 ## Secciones
 
 1. **Mapa de parcelas**: 197 parcelas con color por rendimiento (verde claro = bajo, oscuro = alto), borde punteado para las predichas, filtros, KPIs, tabla ordenable y exportación a CSV. También puede colorearse por riesgo crediticio.
-2. **Ficha de parcela**: predicción con intervalo, curva de índices satelitales (NDVI, EVI, LAI, NDDI, NDWI; Sentinel-2 o Planet), clima mensual, cascada tipo SHAP y 5 parcelas vecinas.
-3. **Desempeño del modelo**: métricas de validación cruzada anidada, comparación de modelos, dispersión, residuales, importancia por familia, robustez espacial y metodología.
-4. **Hallazgos clave**: tres tarjetas narrativas con mini gráfica.
-5. **Simulador y riesgo crediticio**: escenarios de lluvia de mayo y temperatura mínima de abril, con aviso de rango, y semáforo de riesgo con precio y costo editables.
+2. **Ficha de parcela**: predicción con intervalo y por enfoque, curva de índices satelitales (NDVI, EVI, LAI, NDDI, NDWI; Sentinel-2 o Planet), clima mensual, cascada tipo SHAP y 5 parcelas vecinas.
+3. **Desempeño del modelo**: métricas de validación cruzada anidada, comparación de modelos, comparación de los tres enfoques (ensamble, solo ubicación y mezcla) con validación estratificada y con un municipio fuera, dispersión, residuales, importancia por familia, robustez espacial y metodología.
+4. **Hallazgos clave**: tres tarjetas narrativas con gráficas. El texto se arma con los números que devuelve la API.
+5. **Simulador y riesgo crediticio**: escenarios de lluvia de mayo y temperatura mínima de abril con el modelo real, aviso de rango, y semáforo de riesgo con precio y costo editables.
 
 ## Estructura
 
 ```
-index.html          Estructura, navegación y carga de scripts
-css/styles.css      Estilos, modo claro y oscuro, responsive
-js/data.js          Capa de datos (único lugar con datos simulados)
-js/ui.js            Iconos, formato, tooltip, estado compartido, reglas de riesgo
-js/charts.js        Gráficas en SVG y HTML sin librerías
-js/views/*.js       Una vista por sección
-js/app.js           Arranque, rutas (#/mapa, #/parcela/ID, ...) y tema
-vendor/leaflet/     Leaflet 1.9.4
+src/
+  index.html, main.ts, styles.css      arranque y estilos globales (modo claro y oscuro, responsive)
+  environments/                        environment.ts (API) y environment.demo.ts (datos simulados)
+  app/
+    app.ts, app.html, app.routes.ts    shell, navegación y rutas con # (#/mapa, #/parcela/AGC_003)
+    core/
+      api/ceba-api.ts                  único lugar que habla con la API (HttpCebaApi y DemoCebaApi)
+      demo/demo-data.ts                generador de datos simulados
+      models.ts                        tipos de la API
+      state.ts                         estado compartido: filtros, supuestos de riesgo, parcela elegida
+      tooltip.ts, theme.ts, ...        tooltip, tema claro y oscuro, formato, colores, reglas de riesgo
+    shared/                            iconos, estados vacíos y de error, y las gráficas en SVG sin librerías
+    features/                          una página por sección (mapa, parcela, modelo, hallazgos, simulador)
 ```
 
-## Conectar una API real
+Usa componentes standalone, signals, `resource` para cargar datos y rutas con carga diferida.
 
-Todo el dashboard pide sus datos solo a través de `CebaApi` (`js/data.js`). Para usar un servidor propio:
-
-```js
-CebaApi.configurar({ baseUrl: "https://mi-servidor" });
-```
-
-Endpoints esperados:
+## Endpoints que consume
 
 | Método | Ruta | Respuesta |
 |---|---|---|
 | GET | `/api/parcelas` | lista de parcelas |
-| GET | `/api/parcelas/:id` | `{ parcela, serie, clima, shap, shap_otras, base, vecinos }` |
-| GET | `/api/modelo/metricas` | métricas, modelos, dispersión, residuales, importancias, robustez y hallazgos |
+| GET | `/api/parcelas/:id` | `{ parcela, otros_enfoques, serie, clima, shap, shap_otras, base, vecinos }` |
+| GET | `/api/modelo/metricas` | métricas, comparación de candidatos, dispersión, residuales, importancias, robustez y hallazgos |
 | POST | `/api/simulador` | recibe `{ id, delta_lluvia_mayo_pct, delta_tmin_abril_c }` |
 
-Los campos de cada parcela, serie, clima y shap son los de la especificación del proyecto. `data.js` documenta además los campos extra que se usan (por ejemplo `unidad` en `shap`, o `fuera_de_rango` en el simulador).
+Los tipos están en `src/app/core/models.ts`. Si la API no tiene cargadas las curvas satelitales, la ficha muestra "Sin observaciones" en esa gráfica.
 
 ## Reglas de riesgo
 
@@ -84,17 +98,8 @@ Herramienta de apoyo; no sustituye la evaluación crediticia.
 
 ## Accesibilidad
 
-Ni el riesgo ni el conjunto se comunican solo con color: siempre hay icono, forma o etiqueta. Las gráficas tienen tooltip, leyenda visible y, cuando hay muchos puntos, una tabla alternativa. El mapa se complementa con la tabla, que se recorre con teclado.
+Ni el riesgo ni el conjunto se comunican solo con color: siempre hay icono, forma o etiqueta. Las gráficas tienen tooltip (también con teclado) y leyenda visible, y el diagrama de dispersión trae una tabla alternativa. El mapa se complementa con la tabla, que se recorre con teclado.
 
 ## Pipeline y modelos
 
-La carpeta `pipeline/` trae el pipeline de datos y el modelo (LightGBM, Random Forest y Elastic Net con ensamble) que genera las predicciones de las 59 parcelas. El paso a paso para correrlo está en [`pipeline/README.md`](pipeline/README.md). Resumen:
-
-```bash
-cd pipeline
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-python correr_pipeline.py
-```
-
-Necesita la carpeta `DATASET_RETO_AGRO_2026/` en la raíz del repo. Las salidas quedan en `pipeline/salidas/`. El dashboard todavía muestra datos simulados y no lee esas salidas.
+Ya no viven aquí. Están en [cebadata_api](https://github.com/ALNM7/cebadata_api): pasos 01 a 09, los tres enfoques (ensamble, ubicación y mezcla) y la API.
