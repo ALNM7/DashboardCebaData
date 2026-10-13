@@ -7,7 +7,6 @@
    configuración normal el dashboard pide todo a la API.
    ============================================================ */
 import {
-  Candidato,
   ClimaMes,
   DetalleParcela,
   FueraDeRango,
@@ -267,16 +266,8 @@ export class DatosDemo {
     const p = this.parcelas.find((q) => q.id === id);
     if (!p) return null;
     const sh = this.shap(p);
-    /* el enfoque de ubicación es el promedio del municipio; la mezcla es la predicción mostrada */
-    const mun = MUNICIPIOS.find((m) => m.nombre === p.municipio)!;
-    const ubic = round(mun.base + mun.ajuste, 2);
-    const otros: Partial<Record<Candidato, number>> = {
-      ensamble: round(2 * p.rendimiento_pred - ubic, 2),
-      ubicacion: ubic,
-      mezcla: p.rendimiento_pred,
-    };
     return structuredClone({
-      parcela: p, modelo: 'mezcla', otros_enfoques: otros, serie: this.serie(p), clima: this.clima.get(p.id)!,
+      parcela: p, serie: this.serie(p), clima: this.clima.get(p.id)!,
       shap: sh.shap, shap_otras: sh.otras, base: MEDIA_OBS, vecinos: this.vecinos(p),
     });
   }
@@ -311,7 +302,7 @@ export class DatosDemo {
       fuera.push({ variable: 'tmin_abril', etiqueta: 'Temperatura mínima de abril', valor: tminEsc, min: R.tmin_abril.min, max: R.tmin_abril.max, unidad: '°C' });
     }
     return {
-      id: p.id, modelo: 'mezcla',
+      id: p.id,
       base: { pred: p.rendimiento_pred, inf: p.intervalo_inf, sup: p.intervalo_sup },
       escenario: { pred: round(predEsc, 2), inf: round(predEsc - hwEsc, 2), sup: round(predEsc + hwEsc, 2) },
       diferencia: round(predEsc - p.rendimiento_pred, 2),
@@ -430,30 +421,25 @@ export class DatosDemo {
   private construirMetricas(): Metricas {
     const disp = this.entren.map((p) => ({ id: p.id, estado: p.estado, municipio: p.municipio, obs: p.rendimiento_obs ?? 0, pred: p.rendimiento_pred }));
     return {
-      modelo_final: 'mezcla',
+      modelo: { nombre: 'Mezcla', descripcion: 'Promedio de las predicciones del ensamble y del modelo de ubicación.', n_variables: 122 },
       validacion: {
-        esquema: 'Validación cruzada anidada',
-        rmse: 0.508, mae: 0.354, r2: 0.64,
+        esquema: 'Validación cruzada anidada estratificada por municipio',
+        rmse: 0.508, mae: 0.354, r2: 0.64, sesgo: 0.005,
         baseline: { nombre: 'Predecir el promedio', rmse: 0.846, r2: 0 },
       },
-      modelos: [
-        { nombre: 'Promedio (referencia)', rmse: 0.846, referencia: true },
-        { nombre: 'Elastic Net', clave: 'enet', rmse: 0.53 },
-        { nombre: 'Random Forest', clave: 'rf', rmse: 0.522 },
-        { nombre: 'LightGBM', clave: 'lgbm', rmse: 0.507 },
-        { nombre: 'Ensamble', clave: 'ensamble', rmse: 0.508, detalle: 'Promedio de LightGBM, Random Forest y Elastic Net' },
-        { nombre: 'Solo ubicación', clave: 'ubicacion', rmse: 0.525, detalle: 'LightGBM que solo usa la longitud' },
-        { nombre: 'Mezcla', clave: 'mezcla', rmse: 0.508, elegido: true, detalle: 'Promedio del ensamble y el modelo de ubicación' },
-      ],
-      candidatos: [
+      lomo: {
+        esquema: 'Un municipio completo fuera en cada ronda (LOMO)',
+        rmse: 0.594, mae: 0.473, r2: 0.51, sesgo: -0.013,
+        baseline: { nombre: 'Promedio de las demás zonas', rmse: 1.153, r2: -0.85 },
+      },
+      comparacion: [
         { id: 'ensamble', nombre: 'Ensamble', descripcion: 'LightGBM, Random Forest y Elastic Net con todas las variables.', elegido: false, n_variables: 121,
           estratificada: { rmse: 0.508, mae: 0.362, r2: 0.64, sesgo: 0 }, lomo: { rmse: 0.722, mae: 0.6, r2: 0.28, sesgo: -0.102 } },
-        { id: 'ubicacion', nombre: 'Solo ubicación', descripcion: 'LightGBM que solo usa la longitud. Es lo que encontró el análisis de modelos clásicos.', elegido: false, n_variables: 1,
+        { id: 'ubicacion', nombre: 'Solo ubicación', descripcion: 'LightGBM que solo usa la longitud.', elegido: false, n_variables: 1,
           estratificada: { rmse: 0.525, mae: 0.364, r2: 0.62, sesgo: 0.011 }, lomo: { rmse: 0.539, mae: 0.378, r2: 0.6, sesgo: 0.077 } },
         { id: 'mezcla', nombre: 'Mezcla', descripcion: 'Promedio de las predicciones del ensamble y del modelo de ubicación.', elegido: true, n_variables: 122,
-          estratificada: { rmse: 0.508, mae: 0.354, r2: 0.64, sesgo: 0.005 }, lomo: { rmse: 0.595, mae: 0.473, r2: 0.51, sesgo: -0.013 } },
+          estratificada: { rmse: 0.508, mae: 0.354, r2: 0.64, sesgo: 0.005 }, lomo: { rmse: 0.594, mae: 0.473, r2: 0.51, sesgo: -0.013 } },
       ],
-      lomo_media_resto: { rmse: 1.153, nombre: 'Promedio de las demás zonas' },
       dispersion: disp,
       residuales: disp.map((d) => round(d.obs - d.pred, 3)),
       importancia_familias: [

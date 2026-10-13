@@ -66,14 +66,6 @@
     </div>
     <div>
       <ceba-interval-bar [parcela]="p" />
-      @if (otrosEnfoques().length) {
-        <p class="card-sub" style="margin-top:12px">
-          Por enfoque:
-          @for (o of otrosEnfoques(); track o.clave; let ultimo = $last) {
-            <span [style.font-weight]="o.activo ? 600 : 400" [style.color]="o.activo ? 'var(--ink)' : null">{{ o.nombre }} {{ fmt(o.valor, 2) }}{{ o.activo ? ' (el que se muestra)' : '' }}</span>{{ ultimo ? '' : ' · ' }}
-          }
-        </p>
-      }
     </div>
   </section>
 
@@ -143,9 +135,9 @@
         <span class="legend-item muted">Se muestran las {{ cascada().length }} variables con más efecto. El eje no empieza en cero.</span>
       </div>
       <div class="chart-box">
-        <ceba-waterfall [base]="base()" [otras]="d.shap_otras" [items]="cascada()" otrasSub="Resto de variables y ajuste de la mezcla" />
+        <ceba-waterfall [base]="base()" [otras]="d.shap_otras" [items]="cascada()" otrasSub="Resto de variables y mezcla con la ubicación" />
       </div>
-      <p class="card-sub" style="margin-top:10px">La explicación sale del ensamble (el modelo con todas las variables). Lo que la mezcla con el modelo de ubicación cambia respecto a eso queda en "Otras variables".</p>
+      <p class="card-sub" style="margin-top:10px">La explicación sale de la parte del ensamble (la que usa todas las variables). Lo que aporta la otra mitad de la mezcla, el modelo de ubicación, queda en "Otras variables".</p>
     </div>
   </section>
 

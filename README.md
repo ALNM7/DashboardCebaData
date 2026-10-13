@@ -2,7 +2,9 @@
 
 Dashboard web en español, hecho en Angular, para consultar el modelo que predice el rendimiento de cebada (t/ha) en 197 parcelas del altiplano de Hidalgo, Puebla y Tlaxcala, ciclo abril a octubre de 2025.
 
-Los datos los sirve [cebadata_api](https://github.com/ALNM7/cebadata_api) (proyecto Django con el pipeline y los modelos). Este repo es solo el front.
+Los datos los sirve [cebadata_api](https://github.com/ALNM7/cebadata_api) (API de Django que carga los artefactos congelados del modelo). Este repo es solo el front.
+
+El modelo es uno solo: la **mezcla** del ensamble (LightGBM, Random Forest y Elastic Net) con un LightGBM de solo longitud. La comparación con los otros dos enfoques vive únicamente en el panel de metodología de "Desempeño del modelo".
 
 ## Cómo ejecutarlo
 
@@ -14,7 +16,7 @@ npm install
 
 ### Con la API real
 
-1. Levanta la API (ver el README de `cebadata_api`): `python manage.py runserver` en el puerto 8000.
+1. Levanta la API (ver el README de `cebadata_api`): `pip install -r requirements.txt` y `python manage.py runserver` en el puerto 8000. No necesita el pipeline.
 2. En este repo:
 
    ```bash
@@ -50,10 +52,10 @@ Necesitas conexión a internet para el mapa base (OpenStreetMap) y la tipografí
 ## Secciones
 
 1. **Mapa de parcelas**: 197 parcelas con color por rendimiento (verde claro = bajo, oscuro = alto), borde punteado para las predichas, filtros, KPIs, tabla ordenable y exportación a CSV. También puede colorearse por riesgo crediticio.
-2. **Ficha de parcela**: predicción con intervalo y por enfoque, curva de índices satelitales (NDVI, EVI, LAI, NDDI, NDWI; Sentinel-2 o Planet), clima mensual, cascada tipo SHAP y 5 parcelas vecinas.
-3. **Desempeño del modelo**: métricas de validación cruzada anidada, comparación de modelos, comparación de los tres enfoques (ensamble, solo ubicación y mezcla) con validación estratificada y con un municipio fuera, dispersión, residuales, importancia por familia, robustez espacial y metodología.
+2. **Ficha de parcela**: predicción con intervalo, curva de índices satelitales (NDVI, EVI, LAI, NDDI, NDWI; Sentinel-2 o Planet), clima mensual, cascada tipo SHAP y 5 parcelas vecinas.
+3. **Desempeño del modelo**: métricas de la mezcla donde se califica (validación anidada estratificada por municipio) y en una zona nueva (un municipio fuera, LOMO), error contra sus referencias, importancia por familia, dispersión, residuales, robustez espacial y metodología. Dentro de la metodología, un párrafo y una tabla estática justifican por qué se eligió la mezcla.
 4. **Hallazgos clave**: tres tarjetas narrativas con gráficas. El texto se arma con los números que devuelve la API.
-5. **Simulador y riesgo crediticio**: escenarios de lluvia de mayo y temperatura mínima de abril con el modelo real, aviso de rango, y semáforo de riesgo con precio y costo editables.
+5. **Simulador y riesgo crediticio**: escenarios de lluvia de mayo y temperatura mínima de abril con el modelo real, aviso de rango (con la nota de que con la mezcla solo la parte del ensamble reacciona al clima y de que la lluvia de mayo puede actuar como indicador de zona), y semáforo de riesgo con precio y costo editables.
 
 ## Estructura
 
@@ -80,8 +82,8 @@ Usa componentes standalone, signals, `resource` para cargar datos y rutas con ca
 | Método | Ruta | Respuesta |
 |---|---|---|
 | GET | `/api/parcelas` | lista de parcelas |
-| GET | `/api/parcelas/:id` | `{ parcela, otros_enfoques, serie, clima, shap, shap_otras, base, vecinos }` |
-| GET | `/api/modelo/metricas` | métricas, comparación de candidatos, dispersión, residuales, importancias, robustez y hallazgos |
+| GET | `/api/parcelas/:id` | `{ parcela, serie, clima, shap, shap_otras, base, vecinos }` |
+| GET | `/api/modelo/metricas` | métricas de la mezcla (estratificada y LOMO), dispersión, residuales, importancias, robustez, hallazgos y la tabla de comparación para la metodología |
 | POST | `/api/simulador` | recibe `{ id, delta_lluvia_mayo_pct, delta_tmin_abril_c }` |
 
 Los tipos están en `src/app/core/models.ts`. Si la API no tiene cargadas las curvas satelitales, la ficha muestra "Sin observaciones" en esa gráfica.
@@ -102,4 +104,4 @@ Ni el riesgo ni el conjunto se comunican solo con color: siempre hay icono, form
 
 ## Pipeline y modelos
 
-Ya no viven aquí. Están en [cebadata_api](https://github.com/ALNM7/cebadata_api): pasos 01 a 09, los tres enfoques (ensamble, ubicación y mezcla) y la API.
+Ya no viven aquí. Están en [cebadata_api](https://github.com/ALNM7/cebadata_api): `pipeline/` (solo para reproducir el reporte y regenerar artefactos) y la API, que solo carga los artefactos congelados.

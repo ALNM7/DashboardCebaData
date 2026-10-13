@@ -1,7 +1,6 @@
 /* Tipos de la API. Son los mismos que sirve cebadata_api (ver el README de ese repo). */
 
 export type Conjunto = 'ENTRENAMIENTO' | 'PREDICCION';
-export type Candidato = 'ensamble' | 'ubicacion' | 'mezcla';
 export type FuenteSatelital = 'S2' | 'Planet';
 export type IndiceId = 'ndvi' | 'evi' | 'lai' | 'nddi' | 'ndwi';
 
@@ -53,8 +52,6 @@ export interface Vecino {
 
 export interface DetalleParcela {
   parcela: Parcela;
-  modelo?: Candidato;
-  otros_enfoques?: Partial<Record<Candidato, number>>;
   serie: PuntoSerie[];
   clima: ClimaMes[];
   shap: ItemShap[];
@@ -70,17 +67,14 @@ export interface MetricasValidacion {
   sesgo?: number;
 }
 
-export interface ModeloProbado {
-  nombre: string;
-  clave?: string;
-  rmse: number;
-  referencia?: boolean;
-  elegido?: boolean;
-  detalle?: string | null;
+export interface Validacion extends MetricasValidacion {
+  esquema: string;
+  baseline: { nombre: string; rmse: number; r2: number };
 }
 
-export interface CandidatoMetricas {
-  id: Candidato;
+/** Una fila de la tabla estática de la metodología: los tres enfoques que se compararon. */
+export interface FilaComparacion {
+  id: string;
   nombre: string;
   descripcion: string;
   elegido: boolean;
@@ -123,22 +117,14 @@ export interface RangoEntrenamiento {
 }
 
 export interface Metricas {
-  modelo_final?: Candidato;
-  validacion: {
-    esquema: string;
-    rmse: number;
-    mae: number;
-    r2: number;
-    baseline: { nombre: string; rmse: number; r2: number };
-  };
-  modelos: ModeloProbado[];
-  candidatos?: CandidatoMetricas[];
-  lomo_media_resto?: { rmse: number; nombre: string };
+  modelo: { nombre: string; descripcion: string; n_variables: number };
+  validacion: Validacion;
+  lomo: Validacion;
+  comparacion: FilaComparacion[];
   dispersion: PuntoDispersion[];
   residuales: number[];
   importancia_familias: { familia: string; valor: number }[];
   robustez_espacial: { municipio: string; rmse: number; n?: number }[];
-  robustez_candidatos?: ({ municipio: string; n: number } & Record<string, number | string>)[];
   hallazgos: Hallazgos;
   n_parcelas?: { total: number; medidas: number; ocultas: number };
   rango_entrenamiento: RangoEntrenamiento;
@@ -167,7 +153,6 @@ export interface PrediccionIntervalo {
 
 export interface RespuestaSimulador {
   id: string;
-  modelo?: Candidato;
   base: PrediccionIntervalo;
   escenario: PrediccionIntervalo;
   diferencia: number;

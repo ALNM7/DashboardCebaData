@@ -2,7 +2,6 @@ import { Component, computed, inject, resource } from '@angular/core';
 
 import { CebaApi } from '../../core/api/ceba-api';
 import { fmt, fmtSigned } from '../../core/format';
-import { CandidatoMetricas } from '../../core/models';
 import { b, fila, filaSub, tip } from '../../core/tooltip';
 import { HbarChart, ItemBarra } from '../../shared/charts/hbar-chart';
 import { HistogramChart } from '../../shared/charts/histogram-chart';
@@ -41,88 +40,35 @@ export class ModeloPage {
   protected readonly grupos = GRUPOS;
 
   protected readonly m = computed(() => (this.metricas.hasValue() ? this.metricas.value() : undefined));
-  protected readonly v = computed(() => this.m()?.validacion);
-  protected readonly mejora = computed(() => {
-    const v = this.v();
-    return v ? Math.round(((v.baseline.rmse - v.rmse) / v.baseline.rmse) * 100) : 0;
-  });
   protected readonly n = computed(() => this.m()?.n_parcelas ?? { total: 197, medidas: 138, ocultas: 59 });
 
-  /* ---------- error por modelo ---------- */
-  private readonly minRmse = computed(() => Math.min(...(this.m()?.modelos ?? []).filter((x) => !x.referencia).map((x) => x.rmse)));
-  protected readonly modelos = computed<ItemBarra[]>(() =>
-    (this.m()?.modelos ?? []).map((x) => ({
-      label: x.nombre,
-      value: x.rmse,
-      cls: x.referencia ? 'mute' : x.elegido ? 'strong' : '',
-      key: !!x.elegido,
-      flag: x.elegido ? 'Modelo usado' : !x.referencia && x.rmse === this.minRmse() ? 'Menor RMSE' : '',
-      tip: tip(
-        x.nombre,
-        fila('RMSE: ', b(fmt(x.rmse, 3)), ' t/ha'),
-        filaSub(x.referencia ? 'Siempre predice el promedio de las parcelas' : (x.detalle ? x.detalle + '. ' : '') + 'Validación cruzada anidada'),
-      ),
-    })),
-  );
-  protected readonly lecturaModelos = computed(() => {
+  /** Cuánto baja el error frente a la referencia de cada validación. */
+  protected mejora(v: { rmse: number; baseline: { rmse: number } }): number {
+    return Math.round(((v.baseline.rmse - v.rmse) / v.baseline.rmse) * 100);
+  }
+
+  /* ---------- error de la mezcla contra sus referencias ---------- */
+  protected readonly errores = computed<ItemBarra[]>(() => {
     const m = this.m();
-    const v = this.v();
-    if (!m || !v) return '';
-    const elegido = m.modelos.find((x) => x.elegido);
-    const ref = Math.round(((v.baseline.rmse - this.minRmse()) / v.baseline.rmse) * 100);
-    if (!elegido) return `El mejor modelo reduce el error cerca de ${ref} % frente a predecir el promedio.`;
-    const dif = elegido.rmse - this.minRmse();
-    const mejor = m.modelos.filter((x) => !x.referencia).sort((a, c) => a.rmse - c.rmse)[0];
-    const empate = dif < RUIDO
-      ? `Queda a menos de ${fmt(RUIDO, 3)} t/ha del menor RMSE (${mejor.nombre}, ${fmt(mejor.rmse, 3)}): esa diferencia está dentro del ruido de la validación.`
-      : `Su RMSE es ${fmt(dif, 3)} t/ha mayor que el del mejor (${mejor.nombre}, ${fmt(mejor.rmse, 3)}).`;
-    return `El modelo usado es ${elegido.nombre} (${fmt(elegido.rmse, 3)}). ${empate} Reduce el error cerca de ${Math.round(((v.baseline.rmse - elegido.rmse) / v.baseline.rmse) * 100)} % frente a predecir el promedio.`;
+    if (!m) return [];
+    const v = m.validacion, l = m.lomo;
+    const barra = (label: string, value: number, cls: ItemBarra['cls'], detalle: string, key = false): ItemBarra => ({
+      label, value, cls, key, flag: key ? 'Modelo usado' : '',
+      tip: tip(label, fila('RMSE: ', b(fmt(value, 3)), ' t/ha'), filaSub(detalle)),
+    });
+    return [
+      barra('Promedio (referencia)', v.baseline.rmse, 'mute', 'Siempre predice el promedio de las parcelas'),
+      barra('Mezcla, donde se califica', v.rmse, 'strong', 'Validación anidada estratificada por municipio', true),
+      barra('Promedio de las demás zonas', l.baseline.rmse, 'mute', 'Predice el promedio de las parcelas de los otros municipios'),
+      barra('Mezcla, en zona nueva', l.rmse, 'strong', 'Un municipio completo fuera en cada ronda (LOMO)', true),
+    ];
   });
+  protected readonly maxErrores = computed(() => Math.max(1.1, (this.m()?.lomo.baseline.rmse ?? 0) * 1.08));
 
   protected readonly importancia = computed<ItemBarra[]>(() =>
     (this.m()?.importancia_familias ?? []).map((x, i) => ({ label: x.familia, sub: SUB[x.familia] ?? '', value: x.valor, key: i === 0 })),
   );
   protected readonly maxImportancia = computed(() => Math.max(0.1, ...(this.m()?.importancia_familias ?? []).map((x) => x.valor)) * 1.2);
-
-  /* ---------- comparación de enfoques ---------- */
-  protected readonly candidatos = computed(() => this.m()?.candidatos ?? []);
-  private itemsCandidatos(clave: 'estratificada' | 'lomo'): ItemBarra[] {
-    return this.candidatos().map((c) => ({
-      label: c.nombre, value: c[clave].rmse, key: c.elegido, cls: c.elegido ? 'strong' : '', flag: c.elegido ? 'Modelo usado' : '',
-      tip: tip(c.nombre, fila('RMSE: ', b(fmt(c[clave].rmse, 3)), ' t/ha'), fila('MAE: ', b(fmt(c[clave].mae, 3)), ' t/ha · R²: ', b(fmt(c[clave].r2, 2))), filaSub(c.descripcion)),
-    }));
-  }
-  protected readonly itemsEstratificada = computed(() => this.itemsCandidatos('estratificada'));
-  protected readonly itemsLomo = computed(() => this.itemsCandidatos('lomo'));
-  protected readonly refLomo = computed(() => {
-    const r = this.m()?.lomo_media_resto;
-    return r ? { value: r.rmse, label: `${r.nombre} ${fmt(r.rmse, 3)}` } : undefined;
-  });
-  protected readonly refBase = computed(() => {
-    const v = this.v();
-    return v ? { value: v.baseline.rmse, label: `Promedio ${fmt(v.baseline.rmse, 3)}` } : undefined;
-  });
-  protected readonly maxComparacion = computed(() => Math.max(1.0, (this.m()?.lomo_media_resto?.rmse ?? 0) * 1.08));
-  protected readonly lecturaCandidatos = computed(() => {
-    const c = this.candidatos();
-    if (c.length < 3) return [];
-    const mejorEst = Math.min(...c.map((x) => x.estratificada.rmse));
-    const empatados = c.filter((x) => x.estratificada.rmse - mejorEst < RUIDO);
-    const mejorLomo = [...c].sort((a, d) => a.lomo.rmse - d.lomo.rmse)[0];
-    const peorLomo = [...c].sort((a, d) => d.lomo.rmse - a.lomo.rmse)[0];
-    const frases: string[] = [];
-    frases.push(
-      empatados.length > 1
-        ? `Donde se califica, ${lista(empatados)} quedan empatados en RMSE (la diferencia es menor a ${fmt(RUIDO, 3)} t/ha, dentro del ruido).`
-        : `Donde se califica, ${empatados[0].nombre.toLowerCase()} tiene el menor RMSE (${fmt(mejorEst, 3)}).`,
-    );
-    frases.push(`En una zona nueva de la región, ${mejorLomo.nombre.toLowerCase()} es el mejor (${fmt(mejorLomo.lomo.rmse, 3)}) y ${peorLomo.nombre.toLowerCase()} es el que más se cae (${fmt(peorLomo.lomo.rmse, 3)}).`);
-    const el = c.find((x) => x.elegido);
-    if (el && el.id !== mejorLomo.id && el.id !== peorLomo.id) {
-      frases.push(`${el.nombre} queda en medio: ${fmt(el.lomo.rmse - mejorLomo.lomo.rmse, 3)} t/ha por encima del mejor en zonas nuevas, pero mucho mejor que ${peorLomo.nombre.toLowerCase()}.`);
-    }
-    return frases;
-  });
 
   /* ---------- dispersión y errores ---------- */
   protected readonly puntos = computed(() => (this.m()?.dispersion ?? []).map((d) => ({ id: d.id, mun: d.municipio, g: d.estado, x: d.obs, y: d.pred })));
@@ -133,7 +79,7 @@ export class ModeloPage {
 
   /* ---------- robustez ---------- */
   protected readonly robustez = computed<ItemBarra[]>(() => {
-    const v = this.v();
+    const v = this.m()?.validacion;
     return (this.m()?.robustez_espacial ?? []).map((x) => {
       const alto = !!v && x.rmse > 0.6;
       return {
@@ -141,14 +87,22 @@ export class ModeloPage {
         tip: tip(
           x.municipio,
           fila('RMSE al dejarlo fuera: ', b(fmt(x.rmse, 2)), ' t/ha', x.n ? ` (${x.n} parcelas)` : ''),
-          filaSub(alto && v ? `Es ${fmt(x.rmse / v.rmse, 1)} veces el error global` : 'Cerca o por debajo del error global'),
+          filaSub(alto && v ? `Es ${fmt(x.rmse / v.rmse, 1)} veces el error donde se califica` : 'Cerca o por debajo del error donde se califica'),
         ),
       };
     });
   });
-}
 
-function lista(c: CandidatoMetricas[]): string {
-  const n = c.map((x) => x.nombre.toLowerCase());
-  return n.length > 1 ? n.slice(0, -1).join(', ') + ' y ' + n[n.length - 1] : n[0];
+  /* ---------- justificación de la mezcla (tabla estática de la metodología) ---------- */
+  protected readonly justificacion = computed(() => {
+    const c = this.m()?.comparacion ?? [];
+    const ens = c.find((x) => x.id === 'ensamble'), ubi = c.find((x) => x.id === 'ubicacion'), mez = c.find((x) => x.id === 'mezcla');
+    if (!ens || !ubi || !mez) return '';
+    const empata = Math.abs(ens.estratificada.rmse - mez.estratificada.rmse) < RUIDO;
+    return (
+      `${empata ? 'Donde se califica, la mezcla y el ensamble empatan en RMSE (la diferencia es menor a ' + fmt(RUIDO, 3) + ' t/ha, dentro del ruido de la validación)' : 'Donde se califica, la mezcla obtiene un RMSE de ' + fmt(mez.estratificada.rmse, 3) + ' frente a ' + fmt(ens.estratificada.rmse, 3) + ' del ensamble'}` +
+      ` y tiene el menor MAE (${fmt(mez.estratificada.mae, 3)}). En una zona nueva de la región la ubicación sola es la mejor (${fmt(ubi.lomo.rmse, 3)}), el ensamble se cae a ${fmt(ens.lomo.rmse, 3)} y la mezcla queda en ${fmt(mez.lomo.rmse, 3)}. ` +
+      'Por eso se eligió la mezcla: conserva la precisión del ensamble donde se califica y recorta buena parte de su caída fuera de las zonas conocidas, con una narrativa que se puede explicar parcela por parcela.'
+    );
+  });
 }

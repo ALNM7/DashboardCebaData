@@ -3,7 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 
 import { CebaApi, ErrorApi } from '../../core/api/ceba-api';
 import { fmt, fmtSigned, normalizarId } from '../../core/format';
-import { Candidato, ClimaMes, IndiceId, FuenteSatelital, ItemShap } from '../../core/models';
+import { ClimaMes, IndiceId, FuenteSatelital, ItemShap } from '../../core/models';
 import { EstadoApp } from '../../core/state';
 import { yieldColor } from '../../core/colors';
 import { IndexChart } from '../../shared/charts/index-chart';
@@ -28,7 +28,6 @@ const FUENTES: { id: FuenteSatelital; nombre: string }[] = [
 ];
 const MESES = ['Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct'];
 const MESES_LARGOS = ['Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre'];
-const ENFOQUES: Record<Candidato, string> = { ensamble: 'Ensamble', ubicacion: 'Solo ubicación', mezcla: 'Mezcla' };
 
 @Component({
   selector: 'ceba-parcela-page',
@@ -52,7 +51,6 @@ export class ParcelaPage {
   protected readonly yieldColor = yieldColor;
   protected readonly indices = INDICES;
   protected readonly fuentes = FUENTES;
-  protected readonly enfoques = ENFOQUES;
   protected readonly meses = MESES;
 
   protected readonly indice = signal<IndiceId>('ndvi');
@@ -90,12 +88,6 @@ export class ParcelaPage {
     { name: 'Mínima', short: 'Mín', color: 'var(--s-blue)', values: this.tmin() },
   ]);
   protected readonly cascada = computed(() => (this.d()?.shap ?? []).map((s) => ({ etiqueta: s.etiqueta, valorTexto: valorTexto(s), contribucion: s.contribucion })));
-  protected readonly otrosEnfoques = computed(() => {
-    const o = this.d()?.otros_enfoques;
-    if (!o) return [];
-    const activo = this.d()?.modelo;
-    return (Object.keys(ENFOQUES) as Candidato[]).filter((k) => o[k] != null).map((k) => ({ clave: k, nombre: ENFOQUES[k], valor: o[k] as number, activo: k === activo }));
-  });
   protected readonly base = computed(() => this.d()?.base ?? 0);
   protected readonly valorPicker = computed(() => this.d()?.parcela.id ?? '');
 

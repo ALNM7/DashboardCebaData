@@ -18,7 +18,7 @@ export class ErrorApi extends Error {
  * Endpoints (los sirve cebadata_api):
  *   GET  /api/parcelas            lista de parcelas
  *   GET  /api/parcelas/:id        ficha de una parcela
- *   GET  /api/modelo/metricas     métricas, comparación de candidatos y hallazgos
+ *   GET  /api/modelo/metricas     métricas de la mezcla, comparación para la metodología y hallazgos
  *   POST /api/simulador           escenario de lluvia de mayo y Tmin de abril
  */
 export abstract class CebaApi {

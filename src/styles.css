@@ -652,3 +652,5 @@ button.rcard { cursor: pointer; font: inherit; color: inherit; }
 
 /* ---------- Angular ---------- */
 router-outlet { display: none; }
+.prueba-titulo { font-size: 14px; margin: 4px 0 -4px; }
+.prueba-titulo .muted { font-weight: 400; }
