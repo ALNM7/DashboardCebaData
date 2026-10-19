@@ -7,6 +7,7 @@ import { CampoClima, RespuestaNuevaParcela, VariableImputada } from '../../core/
 import { nivelRiesgo } from '../../core/risk';
 import { EstadoApp } from '../../core/state';
 import { IconComponent } from '../../shared/icon';
+import { LoaderMatrixComponent } from '../../shared/loaders';
 import { RiskBadgeComponent } from '../../shared/risk-badge';
 import { EmptyStateComponent, ErrorStateComponent, SkelComponent } from '../../shared/states';
 import { IntervalBarComponent } from '../parcela/interval-bar';
@@ -26,7 +27,7 @@ const METODO: Record<RespuestaNuevaParcela['imputacion']['metodo'], string> = {
 
 @Component({
   selector: 'ceba-nueva-parcela',
-  imports: [RouterLink, IconComponent, SkelComponent, ErrorStateComponent, EmptyStateComponent, RiskBadgeComponent, IntervalBarComponent],
+  imports: [RouterLink, IconComponent, LoaderMatrixComponent, SkelComponent, ErrorStateComponent, EmptyStateComponent, RiskBadgeComponent, IntervalBarComponent],
   templateUrl: './nueva-parcela.html',
 })
 export class NuevaParcelaComponent {

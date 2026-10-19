@@ -9,6 +9,7 @@ import { esc } from '../../core/html';
 import { NivelRiesgo, Parcela } from '../../core/models';
 import { NIVELES, ORDEN_NIVELES } from '../../core/risk';
 import { EstadoApp, valorMostrado } from '../../core/state';
+import { LoaderArbolComponent } from '../../shared/loaders';
 import { IconComponent } from '../../shared/icon';
 import { RendCellComponent } from '../../shared/rend-cell';
 import { RiskBadgeComponent } from '../../shared/risk-badge';
@@ -42,7 +43,7 @@ const promedio = (a: number[]) => a.reduce((s, x) => s + x, 0) / a.length;
 
 @Component({
   selector: 'ceba-mapa-page',
-  imports: [RouterLink, IconComponent, SkelComponent, ErrorStateComponent, EmptyStateComponent, RiskBadgeComponent, RendCellComponent],
+  imports: [RouterLink, IconComponent, LoaderArbolComponent, SkelComponent, ErrorStateComponent, EmptyStateComponent, RiskBadgeComponent, RendCellComponent],
   templateUrl: './mapa-page.html',
   host: { style: 'display:contents' },
 })
