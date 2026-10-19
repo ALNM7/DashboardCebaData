@@ -97,7 +97,9 @@
       </form>
 
       <div class="scn-result" aria-live="polite">
-        @if (errorApi(); as msg) {
+        @if (calculando()) {
+          <ceba-loader-matrix />
+        } @else if (errorApi(); as msg) {
           <div class="callout callout-warn" role="alert"><svg cebaIcon="warn"></svg><div>{{ msg }}</div></div>
         } @else if (resultado(); as r) {
           <div>

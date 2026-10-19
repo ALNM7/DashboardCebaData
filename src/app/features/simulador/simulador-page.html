@@ -68,7 +68,9 @@
       </div>
 
       <div class="scn-result" aria-live="polite">
-        @if (errorSim(); as msg) {
+        @if (calculando()) {
+          <ceba-loader-matrix />
+        } @else if (errorSim(); as msg) {
           <ceba-error-state [mensaje]="msg" [reintentar]="false" />
         } @else if (resultado(); as r) {
           @let p = parcelaActual();

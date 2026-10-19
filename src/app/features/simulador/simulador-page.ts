@@ -8,13 +8,14 @@ import { NIVELES, ORDEN_NIVELES, nivelRiesgo } from '../../core/risk';
 import { EstadoApp } from '../../core/state';
 import { TipDirective, b, fila, tip } from '../../core/tooltip';
 import { IconComponent } from '../../shared/icon';
+import { LoaderMatrixComponent } from '../../shared/loaders';
 import { NuevaParcelaComponent } from './nueva-parcela';
 import { RiskBadgeComponent } from '../../shared/risk-badge';
 import { ErrorStateComponent, SkelComponent } from '../../shared/states';
 
 @Component({
   selector: 'ceba-simulador-page',
-  imports: [RouterLink, IconComponent, SkelComponent, ErrorStateComponent, RiskBadgeComponent, TipDirective, NuevaParcelaComponent],
+  imports: [RouterLink, IconComponent, LoaderMatrixComponent, SkelComponent, ErrorStateComponent, RiskBadgeComponent, TipDirective, NuevaParcelaComponent],
   templateUrl: './simulador-page.html',
   host: { style: 'display:contents' },
 })
